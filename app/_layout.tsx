@@ -10,11 +10,11 @@ import { useEffect, useRef } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { logEnvironmentStatus } from "@/lib/config/env";
 import { initializeDatabase } from "@/lib/database";
 import { initializeRevenueCat } from "@/lib/revenuecat/client";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { initializeAuth } from "@/lib/supabase/client";
-import { logEnvironmentStatus } from "@/lib/config/env";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -25,9 +25,10 @@ export default function RootLayout() {
   const setLoading = useAuthStore((state) => state.setLoading);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
-  
+
   // Initialization guard to prevent repeated calls
   const isInitialized = useRef(false);
+  const hasInitializedAuth = useRef(false);
 
   // Initialize app services
   useEffect(() => {
@@ -36,13 +37,13 @@ export default function RootLayout() {
       if (isInitialized.current) {
         return;
       }
-      
+
       try {
         setLoading(true);
         isInitialized.current = true;
 
         console.log("🚀 Initializing Labaku app...");
-        
+
         // Log environment status once at startup
         logEnvironmentStatus();
 
@@ -59,6 +60,7 @@ export default function RootLayout() {
         console.log("✅ RevenueCat initialized");
 
         console.log("🎉 App initialization complete!");
+        hasInitializedAuth.current = true;
       } catch (error) {
         console.error("❌ App initialization failed:", error);
         // Reset initialization flag on error to allow retry
@@ -73,7 +75,8 @@ export default function RootLayout() {
 
   // Handle authentication routing
   useEffect(() => {
-    if (!isLoading) {
+    // Only handle routing after initial auth setup is complete
+    if (!isLoading && hasInitializedAuth.current) {
       if (isAuthenticated) {
         // User is authenticated, ensure they're on the main app
         router.replace("/(tabs)");
