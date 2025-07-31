@@ -19,13 +19,19 @@ export const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, {
   },
 });
 
+// Guard to prevent multiple auth listeners
+let authListenerInitialized = false;
+
 /**
  * Initialize Supabase authentication listener
  * This should be called once when the app starts
  */
 export function initializeAuth() {
-  // Log environment status in development
-  logEnvironmentStatus();
+  // Prevent multiple auth listeners
+  if (authListenerInitialized) {
+    return;
+  }
+  authListenerInitialized = true;
   
   // Listen for auth state changes
   supabase.auth.onAuthStateChange(async (event, session) => {

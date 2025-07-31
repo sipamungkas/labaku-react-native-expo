@@ -28,11 +28,20 @@ export const SUBSCRIPTION_PRODUCTS = {
   YEARLY: 'labaku_premium_yearly',
 } as const;
 
+// Guard to prevent multiple RevenueCat initializations
+let revenueCatInitialized = false;
+
 /**
  * Initialize RevenueCat
  * This should be called once when the app starts
  */
 export async function initializeRevenueCat() {
+  // Prevent repeated initialization
+  if (revenueCatInitialized) {
+    console.log('RevenueCat already initialized, skipping...');
+    return;
+  }
+  
   try {
     // Configure RevenueCat
     if (__DEV__) {
@@ -44,6 +53,7 @@ export async function initializeRevenueCat() {
       apiKey: ENV.REVENUECAT_API_KEY,
     });
     
+    revenueCatInitialized = true;
     console.log('✅ RevenueCat initialized successfully');
     
     // Set up customer info listener

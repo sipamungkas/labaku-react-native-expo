@@ -6,7 +6,7 @@ import {
 import { useFonts } from "expo-font";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -14,6 +14,7 @@ import { initializeDatabase } from "@/lib/database";
 import { initializeRevenueCat } from "@/lib/revenuecat/client";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { initializeAuth } from "@/lib/supabase/client";
+import { logEnvironmentStatus } from "@/lib/config/env";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -24,14 +25,26 @@ export default function RootLayout() {
   const setLoading = useAuthStore((state) => state.setLoading);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
+  
+  // Initialization guard to prevent repeated calls
+  const isInitialized = useRef(false);
 
   // Initialize app services
   useEffect(() => {
     async function initializeApp() {
+      // Prevent repeated initialization
+      if (isInitialized.current) {
+        return;
+      }
+      
       try {
         setLoading(true);
+        isInitialized.current = true;
 
         console.log("🚀 Initializing Labaku app...");
+        
+        // Log environment status once at startup
+        logEnvironmentStatus();
 
         // Initialize database
         await initializeDatabase();
@@ -48,6 +61,8 @@ export default function RootLayout() {
         console.log("🎉 App initialization complete!");
       } catch (error) {
         console.error("❌ App initialization failed:", error);
+        // Reset initialization flag on error to allow retry
+        isInitialized.current = false;
       } finally {
         setLoading(false);
       }

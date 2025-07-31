@@ -19,14 +19,24 @@ const expoDb = openDatabaseSync(DATABASE_NAME);
 // Create Drizzle database instance
 export const db = drizzle(expoDb, { schema });
 
+// Guard to prevent multiple database initializations
+let databaseInitialized = false;
+
 // Database initialization function
 export async function initializeDatabase() {
+  // Prevent repeated initialization
+  if (databaseInitialized) {
+    console.log('Database already initialized, skipping...');
+    return true;
+  }
+  
   try {
     console.log('Initializing Labaku database...');
     
     // Run migrations
     await migrate(db, migrations);
     
+    databaseInitialized = true;
     console.log('Database initialized successfully');
     return true;
   } catch (error) {
