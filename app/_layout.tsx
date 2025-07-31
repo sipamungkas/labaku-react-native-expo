@@ -14,7 +14,7 @@ import { logEnvironmentStatus } from "@/lib/config/env";
 import { initializeDatabase } from "@/lib/database";
 import { initializeRevenueCat } from "@/lib/revenuecat/client";
 import { useAuthStore } from "@/lib/stores/authStore";
-import { initializeAuth } from "@/lib/supabase/client";
+import { initializeAuth, clearAllStoredSessions } from "@/lib/supabase/client";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -43,6 +43,9 @@ export default function RootLayout() {
         isInitialized.current = true;
 
         console.log("🚀 Initializing Labaku app...");
+
+        // Debug: Clear all sessions on fresh start (uncomment for testing)
+        // await clearAllStoredSessions();
 
         // Log environment status once at startup
         logEnvironmentStatus();

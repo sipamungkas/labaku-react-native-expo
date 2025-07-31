@@ -20,6 +20,7 @@ export interface AuthState {
   setSession: (session: Session | null) => void;
   setLoading: (loading: boolean) => void;
   signOut: () => void;
+  clearAllSessions: () => void;
   
   // Subscription state
   subscriptionTier: 'free' | 'premium';
@@ -104,6 +105,15 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           isLoading: false,
           subscriptionTier: 'free',
+        });
+      },
+      
+      clearAllSessions: () => {
+        set({
+          user: null,
+          session: null,
+          isAuthenticated: false,
+          isLoading: false,
         });
       },
       

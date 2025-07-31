@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, Session } from '@supabase/supabase-js';
 import { ENV, logEnvironmentStatus } from '../config/env';
 import { useAuthStore } from '../stores/authStore';
 
@@ -23,6 +23,50 @@ export const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, {
 let authListenerInitialized = false;
 
 /**
+ * Clear all stored sessions (useful for debugging)
+ */
+export async function clearAllStoredSessions() {
+  try {
+    await supabase.auth.signOut();
+    const authStore = useAuthStore.getState();
+    authStore.clearAllSessions();
+    console.log('🧹 All sessions cleared');
+  } catch (error) {
+    console.error('❌ Error clearing sessions:', error);
+  }
+}
+
+/**
+ * Validate if a session is still valid
+ * @param session The session to validate
+ * @returns True if the session is valid, false otherwise
+ */
+async function isValidSession(session: Session | null): Promise<boolean> {
+  if (!session) return false;
+  
+  try {
+    // Check if token exists and is not expired
+    const now = Math.floor(Date.now() / 1000);
+    if (!session.access_token || !session.expires_at || session.expires_at <= now) {
+      console.log('❌ Session token expired or missing');
+      return false;
+    }
+    
+    // Verify user exists and is valid
+    const { data, error } = await supabase.auth.getUser(session.access_token);
+    if (error || !data.user) {
+      console.log('❌ Session user validation failed:', error?.message);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Session validation error:', error);
+    return false;
+  }
+}
+
+/**
  * Initialize Supabase authentication listener
  * This should be called once when the app starts
  */
@@ -33,46 +77,40 @@ export function initializeAuth() {
   }
   authListenerInitialized = true;
   
-  // Listen for auth state changes
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    const authStore = useAuthStore.getState();
-    
-    console.log('🔐 Auth state changed:', event, session?.user?.email || 'No user');
-    
-    switch (event) {
-      case 'INITIAL_SESSION':
-        // Set initial session on app start
-        authStore.setSession(session);
-        break;
-        
-      case 'SIGNED_IN':
-        // User signed in
-        authStore.setSession(session);
-        console.log('✅ User signed in:', session?.user?.email);
-        break;
-        
-      case 'SIGNED_OUT':
-        // User signed out
+  // Set up auth state change listener
+  console.log("🔄 Setting up auth state change listener...");
+  
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      console.log(`🔔 Auth event: ${event}`);
+      
+      // Update auth store with session
+      const authStore = useAuthStore.getState();
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+         authStore.setSession(session);
+       } else if (event === 'INITIAL_SESSION') {
+         // For initial session, validate it before accepting
+         if (session && await isValidSession(session)) {
+           console.log('✅ Valid session restored');
+           authStore.setSession(session);
+         } else {
+           console.log('❌ Invalid or expired session detected');
+           // Clear invalid session
+           await supabase.auth.signOut();
+           authStore.clearAllSessions();
+         }
+      } else if (event === 'SIGNED_OUT') {
         authStore.signOut();
-        console.log('👋 User signed out');
-        break;
-        
-      case 'TOKEN_REFRESHED':
-        // Token was refreshed
-        authStore.setSession(session);
-        console.log('🔄 Token refreshed for:', session?.user?.email);
-        break;
-        
-      case 'USER_UPDATED':
+      } else if (event === 'USER_UPDATED') {
         // User profile was updated
         authStore.setSession(session);
         console.log('📝 User updated:', session?.user?.email);
-        break;
-        
-      default:
+      } else {
         console.log('🔍 Unhandled auth event:', event);
+      }
     }
-  });
+  );
 }
 
 /**
