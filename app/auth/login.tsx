@@ -144,13 +144,24 @@ export default function LoginScreen() {
 
           {/* Sign Up Link */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerText}>Don&apos;t have an account? </Text>
             <Link href="/auth/register" asChild>
               <TouchableOpacity disabled={isLoading}>
                 <Text style={styles.footerLink}>Sign Up</Text>
               </TouchableOpacity>
             </Link>
           </View>
+
+          {/* Development Test Button */}
+          {__DEV__ && (
+            <View style={styles.testSection}>
+              <Link href="/test-deep-link" asChild>
+                <TouchableOpacity style={styles.testButton} disabled={isLoading}>
+                  <Text style={styles.testButtonText}>🧪 Test Deep Links</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -259,6 +270,24 @@ function createStyles(colors: any) {
       fontSize: DesignTokens.fontSize.sm,
       color: colors.primary,
       fontWeight: DesignTokens.fontWeight.semibold,
+    },
+    testSection: {
+      marginTop: DesignTokens.spacing.xl,
+      paddingTop: DesignTokens.spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.inputBorder,
+    },
+    testButton: {
+      backgroundColor: colors.inputBorder,
+      borderRadius: DesignTokens.borderRadius.lg,
+      height: 48,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    testButtonText: {
+      fontSize: DesignTokens.fontSize.sm,
+      fontWeight: DesignTokens.fontWeight.medium,
+      color: colors.textSecondary,
     },
   });
 }

@@ -15,7 +15,7 @@ export const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, {
     // Persist session in secure storage
     persistSession: true,
     // Detect session from URL (useful for email confirmations)
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
   },
 });
 
@@ -106,6 +106,8 @@ export function initializeAuth() {
         // User profile was updated
         authStore.setSession(session);
         console.log('📝 User updated:', session?.user?.email);
+      // Note: Email confirmation is handled through the deep link flow
+      // No specific event for email confirmation in Supabase auth events
       } else {
         console.log('🔍 Unhandled auth event:', event);
       }
@@ -125,6 +127,7 @@ export const authHelpers = {
       email,
       password,
       options: {
+        emailRedirectTo: 'labaku://auth/confirm',
         data: {
           full_name: userData?.fullName,
           app_version: ENV.APP_VERSION,

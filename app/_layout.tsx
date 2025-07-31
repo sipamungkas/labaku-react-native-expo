@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
+import * as Linking from "expo-linking";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -89,6 +90,51 @@ export default function RootLayout() {
       }
     }
   }, [isAuthenticated, isLoading]);
+
+  // Handle deep links
+  useEffect(() => {
+    const handleDeepLink = (url: string) => {
+      console.log('🔗 Deep link received:', url);
+      
+      // Parse the URL
+      const parsed = Linking.parse(url);
+      
+      // Handle email confirmation links
+      if (parsed.path === 'auth/confirm') {
+        console.log('📧 Email confirmation link detected');
+        // Navigate to confirmation screen with query parameters
+        const queryString = parsed.queryParams ? 
+          Object.entries(parsed.queryParams)
+            .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+            .join('&') : '';
+        
+        const confirmUrl = queryString ? `/auth/confirm?${queryString}` : '/auth/confirm';
+        router.push(confirmUrl as any);
+      }
+      // Handle password reset links
+      else if (parsed.path === 'reset-password') {
+        console.log('🔑 Password reset link detected');
+        // You can add password reset handling here if needed
+        router.push('/auth/login');
+      }
+    };
+
+    // Handle initial URL if app was opened via deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink(url);
+      }
+    });
+
+    // Listen for incoming deep links while app is running
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
   if (!loaded) {
     // Async font loading only occurs in development.
