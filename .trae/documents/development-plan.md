@@ -1,8 +1,8 @@
 # Labaku Development Plan & Progress Tracker
 
 **Project**: Laba! (Labaku) - Business Management Mobile App  
-**Platform**: Expo (React Native)  
-**Package Manager**: Bun  
+**Platform**: Expo (React Native) - Android & iOS Only  
+**Package Manager**: Bun (Exclusive)  
 **Last Updated**: December 2024  
 
 ## 📊 Overall Progress: 5% Complete
@@ -21,6 +21,32 @@ Labaku is a mobile application for small business owners to track daily product 
 - Financial reporting & analytics
 - Modern minimalist UI with soft green theme
 
+### Development Constraints:
+- **Target Platforms**: Android and iOS only (no web development)
+- **Package Manager**: Bun exclusively (no npm, yarn, npx, pnpx, or other package managers)
+- **Testing**: Focus on mobile platforms only
+- **Deployment**: Mobile app stores only
+
+---
+
+## 🚨 Development Rules & Constraints
+
+### Package Manager Rules:
+- **ONLY use Bun**: All package installations, scripts, and dependency management must use `bun`
+- **Forbidden commands**: `npm`, `yarn`, `npx`, `pnpx`, `npm install`, `yarn add`, etc.
+- **Allowed commands**: `bun add`, `bun remove`, `bun run`, `bun install`, `bun dev`, etc.
+
+### Platform Rules:
+- **Target platforms**: Android and iOS only
+- **No web development**: Skip all web-related configurations, testing, and deployment
+- **Testing focus**: Mobile simulators and physical devices only
+- **Build targets**: `expo build:android` and `expo build:ios` only
+
+### Development Environment:
+- **Primary testing**: Android emulator and iOS simulator
+- **No browser testing**: Skip web browser compatibility checks
+- **Mobile-first**: All UI/UX decisions should prioritize mobile experience
+
 ---
 
 ## 📋 Development Phases
@@ -35,12 +61,13 @@ Labaku is a mobile application for small business owners to track daily product 
 **Timeline**: Week 1
 
 #### 1.1 Core Dependencies Installation
-- [ ] Install Supabase SDK (`@supabase/supabase-js`)
-- [ ] Install RevenueCat SDK (`react-native-purchases`)
-- [ ] Install SQLite & Drizzle ORM (`expo-sqlite`, `drizzle-orm`, `drizzle-kit`)
-- [ ] Install state management (`zustand`)
-- [ ] Install secure storage (`expo-secure-store`)
-- [ ] Update package.json with all dependencies
+- [ ] Install Supabase SDK (`bun add @supabase/supabase-js`)
+- [ ] Install RevenueCat SDK (`bun add react-native-purchases`)
+- [ ] Install SQLite & Drizzle ORM (`bun add expo-sqlite drizzle-orm drizzle-kit`)
+- [ ] Install state management (`bun add zustand`)
+- [ ] Install secure storage (`bun add expo-secure-store`)
+- [ ] Update package.json with all dependencies using Bun
+- [ ] **Note**: Use `bun` commands exclusively - no npm, yarn, npx, or pnpx
 
 #### 1.2 Project Configuration
 - [ ] Set up Supabase project and authentication
@@ -197,14 +224,49 @@ Labaku is a mobile application for small business owners to track daily product 
 - [ ] Optimize database queries
 - [ ] Implement memory management
 - [ ] Test offline functionality
-- [ ] Optimize app size and bundle
+- [ ] Optimize app size and bundle for mobile
+- [ ] Test on Android devices and emulators
+- [ ] Test on iOS devices and simulators
+- [ ] **No web optimization needed**
 - [ ] Add performance monitoring
 
+---
+
+### ⏳ Phase 8: Mobile Deployment (PENDING)
+**Timeline**: Week 6-7
+
+#### 8.1 Build Preparation
+- [ ] Configure app.json for production builds
+- [ ] Set up Android keystore and signing
+- [ ] Configure iOS certificates and provisioning profiles
+- [ ] Update app icons and splash screens for both platforms
+- [ ] Test production builds using `bun run build:android` and `bun run build:ios`
+
+#### 8.2 App Store Deployment
+- [ ] Prepare Google Play Store listing
+- [ ] Prepare Apple App Store listing
+- [ ] Upload Android APK/AAB to Google Play Console
+- [ ] Upload iOS IPA to App Store Connect
+- [ ] **No web deployment needed**
+- [ ] Set up app store optimization (ASO)
+
+#### 8.3 Post-Launch
+- [ ] Monitor crash reports and performance
+- [ ] Set up analytics for mobile usage
+- [ ] Plan for future mobile updates
+- [ ] **Focus on mobile user feedback only**
+
 #### 7.3 Testing & Quality Assurance
-- [ ] Write unit tests for business logic
+- [ ] Write unit tests for business logic using `bun test`
+- [ ] Test on multiple Android devices and screen sizes
+- [ ] Test on multiple iOS devices and screen sizes
 - [ ] Create integration tests for payment flows
-- [ ] Conduct user acceptance testing
-- [ ] Perform performance testing
+- [ ] Conduct user acceptance testing on mobile devices
+- [ ] Perform performance testing on mobile platforms
+- [ ] Test subscription flows end-to-end on both platforms
+- [ ] Validate data persistence and sync on mobile
+- [ ] **No web browser testing required**
+- [ ] Test offline functionality on mobile devices
 - [ ] Security testing and validation
 
 ---

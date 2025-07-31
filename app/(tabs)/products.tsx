@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Package, Search } from 'lucide-react-native';
+import Purchases from 'react-native-purchases';
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -25,6 +26,24 @@ export default function ProductsScreen() {
   const products = useProducts();
   const { addProduct } = useBusinessStore();
   
+  const handleUpgradeToPremium = async () => {
+    try {
+      const offerings = await Purchases.getOfferings();
+      if (offerings.current !== null) {
+        // In a real app, you would navigate to a subscription screen
+        // For now, we'll show the purchase flow directly
+        const purchaserInfo = await Purchases.purchasePackage(offerings.current.availablePackages[0]);
+        if (typeof purchaserInfo.customerInfo.entitlements.active['premium'] !== 'undefined') {
+          // User successfully subscribed
+          Alert.alert('Success', 'Successfully upgraded to Premium! You can now add unlimited products.');
+        }
+      }
+    } catch (error) {
+      console.error('Error upgrading to premium:', error);
+      Alert.alert('Error', 'Failed to upgrade to Premium. Please try again.');
+    }
+  };
+
   const handleAddProduct = () => {
     // Check if user can add more products
     if (!premiumHelpers.canAddProducts(products.length)) {
@@ -33,7 +52,7 @@ export default function ProductsScreen() {
         `Free tier is limited to ${premiumHelpers.getFreeTierLimits({ products: products.length, vendors: 0 }).products.limit} products. Upgrade to Premium for unlimited products.`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => console.log('Navigate to subscription') },
+          { text: 'Upgrade', onPress: handleUpgradeToPremium },
         ]
       );
       return;

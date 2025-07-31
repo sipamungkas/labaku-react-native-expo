@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
+import migrations from './migrations/migrations';
 import * as schema from './schema';
 
 /**
@@ -24,7 +25,7 @@ export async function initializeDatabase() {
     console.log('Initializing Labaku database...');
     
     // Run migrations
-    await migrate(db, { migrationsFolder: './lib/database/migrations' });
+    await migrate(db, migrations);
     
     console.log('Database initialized successfully');
     return true;
