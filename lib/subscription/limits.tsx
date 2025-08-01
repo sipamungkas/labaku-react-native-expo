@@ -1,6 +1,6 @@
 import React from 'react';
 import { databaseService } from '../database/service';
-import { useSubscriptionTier } from '../revenuecat/client';
+import { useSubscriptionTier } from '../stores/authStore';
 
 /**
  * Subscription Limits and Feature Gating
@@ -234,7 +234,8 @@ export default subscriptionLimits;
  * React Hook for checking subscription limits
  */
 export function useSubscriptionLimits(userId: string) {
-  const { tier, isPremium } = useSubscriptionTier();
+  const tier = useSubscriptionTier();
+  const isPremium = tier === 'premium';
 
   const checkLimit = async (feature: FeatureType): Promise<LimitCheckResult> => {
     return await subscriptionLimits.checkLimit(userId, feature, tier);

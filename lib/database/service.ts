@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
+import migrations from './migrations/migrations';
 import {
   localUsers,
   vendors,
@@ -48,7 +49,7 @@ class DatabaseService {
 
     try {
       // Run migrations
-      await migrate(this.db, { migrationsFolder: './drizzle' });
+      await migrate(this.db, migrations);
       this.isInitialized = true;
       console.log('✅ Database initialized successfully');
     } catch (error) {
@@ -210,7 +211,7 @@ class DatabaseService {
   /**
    * Get all products for a user with latest prices
    */
-  async getProducts(userId: string): Promise<(Product & { latestPrice?: ProductPriceHistory })[]> {
+  async getProducts(userId: string): Promise<(Product & { latestPrice?: ProductPriceHistory | null })[]> {
     try {
       const userProducts = await this.db
         .select()
@@ -362,17 +363,17 @@ class DatabaseService {
    */
   async getTransactions(userId: string, limit?: number): Promise<Transaction[]> {
     try {
-      let query = this.db
+      const baseQuery = this.db
         .select()
         .from(transactions)
         .where(eq(transactions.userId, userId))
         .orderBy(desc(transactions.createdAt));
 
       if (limit) {
-        query = query.limit(limit);
+        return await baseQuery.limit(limit);
       }
 
-      return await query;
+      return await baseQuery;
     } catch (error) {
       console.error('Error getting transactions:', error);
       return [];
@@ -519,7 +520,16 @@ class DatabaseService {
    */
   async getRevenueAnalytics(userId: string, startDate?: string, endDate?: string) {
     try {
-      let query = this.db
+      let whereConditions = [eq(products.userId, userId)];
+      
+      if (startDate && endDate) {
+        whereConditions.push(
+          sql`${transactions.date} >= ${startDate}`,
+          sql`${transactions.date} <= ${endDate}`
+        );
+      }
+
+      const result = await this.db
         .select({
           totalRevenue: sql<number>`SUM(${transactions.quantityOut} * ${productPriceHistory.sellingPrice})`,
           totalTransactions: sql<number>`COUNT(*)`,
@@ -527,19 +537,9 @@ class DatabaseService {
         .from(transactions)
         .innerJoin(products, eq(products.id, transactions.productId))
         .innerJoin(productPriceHistory, eq(productPriceHistory.productId, products.id))
-        .where(eq(products.userId, userId));
-
-      if (startDate && endDate) {
-        query = query.where(
-          and(
-            eq(products.userId, userId),
-            sql`${transactions.date} >= ${startDate}`,
-            sql`${transactions.date} <= ${endDate}`
-          )
-        );
-      }
-
-      const result = await query.get();
+        .where(and(...whereConditions))
+        .get();
+        
       return {
         totalRevenue: result?.totalRevenue || 0,
         totalTransactions: result?.totalTransactions || 0,

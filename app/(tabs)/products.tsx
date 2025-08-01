@@ -16,8 +16,8 @@ import Purchases from 'react-native-purchases';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useProducts, useBusinessStore } from '@/lib/stores/businessStore';
-import { useSubscriptionTier } from '@/lib/revenuecat/client';
-import { useSubscriptionLimits } from '@/lib/subscription/limits.tsx';
+import { useSubscriptionTier } from '@/lib/stores/authStore';
+import { useSubscriptionLimits } from '@/lib/subscription/limits';
 import UpgradePromptModal from '@/components/subscription/UpgradePromptModal';
 import ProductFormModal from '@/components/forms/ProductFormModal';
 
@@ -30,7 +30,8 @@ export default function ProductsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const products = useProducts();
   const { addProduct, updateProduct, deleteProduct } = useBusinessStore();
-  const { tier, isPremium } = useSubscriptionTier();
+  const tier = useSubscriptionTier();
+  const isPremium = tier === 'premium';
   const { checkLimit, getUpgradePrompt } = useSubscriptionLimits('current-user-id'); // TODO: Get actual user ID
   
   // State for search and filtering
@@ -345,6 +346,11 @@ function createStyles(colors: any) {
       fontWeight: '700',
       color: colors.text,
       marginLeft: 12,
+    },
+    searchButton: {
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: colors.background,
     },
     searchContainer: {
       flexDirection: 'row',

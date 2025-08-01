@@ -53,7 +53,7 @@ export default function TransactionForm({
   const products = useProducts();
   const vendors = useVendors();
   const subscriptionTier = useSubscriptionTier();
-  const { addTransaction, updateTransaction, getTransactions } = useBusinessStore();
+  const { addTransaction, updateTransaction, getStock, transactions } = useBusinessStore();
 
   const [formData, setFormData] = useState({
     type: 'sale' as TransactionType,
@@ -107,7 +107,7 @@ export default function TransactionForm({
   // Check transaction limits for free tier
   const checkTransactionLimits = () => {
     if (subscriptionTier === 'free') {
-      const transactions = getTransactions();
+      // transactions is already available from the store
       if (transactions.length >= 100) {
         Alert.alert(
           'Upgrade Required',
@@ -419,7 +419,7 @@ export default function TransactionForm({
                       <View>
                         <Text style={styles.pickerOptionText}>{product.name}</Text>
                         <Text style={styles.pickerOptionSubtext}>
-                          Stock: {product.stock || 0}
+                          Stock: {getStock(product.id)}
                         </Text>
                       </View>
                     </View>

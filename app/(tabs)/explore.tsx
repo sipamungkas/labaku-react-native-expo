@@ -25,7 +25,8 @@ export default function TabTwoScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('30d');
   const [selectedChart, setSelectedChart] = useState<'revenue' | 'profit' | 'vendors'>('revenue');
   const { products, transactions, vendors, stockSummary, getStock } = useBusinessStore();
-  const { tier, isPremium } = useSubscriptionTier();
+  const tier = useSubscriptionTier();
+  const isPremium = tier === 'premium';
 
 
 
@@ -363,9 +364,9 @@ export default function TabTwoScreen() {
             </View>
           )
         ) : (
-          getCurrentChartData().datasets[0].data.some(val => val > 0) ? (
+          'datasets' in getCurrentChartData() && (getCurrentChartData() as any).datasets[0].data.some((val: number) => val > 0) ? (
             <LineChart
-              data={getCurrentChartData()}
+              data={getCurrentChartData() as any}
               width={screenWidth - 40}
               height={220}
               chartConfig={{
@@ -374,7 +375,7 @@ export default function TabTwoScreen() {
                 backgroundGradientTo: Colors[colorScheme ?? 'light'].card,
                 decimalPlaces: 0,
                 color: (opacity = 1) => selectedChart === 'profit' 
-                  ? (getCurrentChartData().datasets[0].data.some(val => val < 0) ? '#FF6B6B' : Colors[colorScheme ?? 'light'].primary)
+                  ? ('datasets' in getCurrentChartData() && (getCurrentChartData() as any).datasets[0].data.some((val: number) => val < 0) ? '#FF6B6B' : Colors[colorScheme ?? 'light'].primary)
                   : Colors[colorScheme ?? 'light'].primary,
                 labelColor: (opacity = 1) => Colors[colorScheme ?? 'light'].text,
                 style: {
@@ -384,7 +385,7 @@ export default function TabTwoScreen() {
                   r: "6",
                   strokeWidth: "2",
                   stroke: selectedChart === 'profit' 
-                    ? (getCurrentChartData().datasets[0].data.some(val => val < 0) ? '#FF6B6B' : Colors[colorScheme ?? 'light'].primary)
+                    ? ('datasets' in getCurrentChartData() && (getCurrentChartData() as any).datasets[0].data.some((val: number) => val < 0) ? '#FF6B6B' : Colors[colorScheme ?? 'light'].primary)
                     : Colors[colorScheme ?? 'light'].primary
                 }
               }}

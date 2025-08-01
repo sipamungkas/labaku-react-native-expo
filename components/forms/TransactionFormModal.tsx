@@ -31,9 +31,9 @@ interface TransactionFormModalProps {
 
 interface FormData {
   productId: string;
-  quantityIn: string;
-  quantityOut: string;
-  date: string;
+  type: 'purchase' | 'sale' | 'adjustment';
+  quantity: string;
+  unitPrice: string;
   notes: string;
 }
 
@@ -47,13 +47,13 @@ export default function TransactionFormModal({
   const colors = Colors[colorScheme ?? 'light'];
   const products = useProducts();
   const subscriptionTier = useSubscriptionTier();
-  const { addTransaction, updateTransaction, getTransactions } = useBusinessStore();
+  const { addTransaction, updateTransaction, transactions, getStock } = useBusinessStore();
 
   const [formData, setFormData] = useState<FormData>({
     productId: '',
-    quantityIn: '',
-    quantityOut: '',
-    date: new Date().toISOString().split('T')[0],
+    type: 'sale',
+    quantity: '',
+    unitPrice: '',
     notes: '',
   });
 
@@ -66,9 +66,9 @@ export default function TransactionFormModal({
       // Editing existing transaction
       setFormData({
         productId: transaction.productId.toString(),
-        quantityIn: transaction.quantityIn?.toString() || '0',
-        quantityOut: transaction.quantityOut?.toString() || '0',
-        date: transaction.date || new Date().toISOString().split('T')[0],
+        type: transaction.type,
+        quantity: transaction.quantity.toString(),
+        unitPrice: transaction.unitPrice.toString(),
         notes: transaction.notes || '',
       });
       
@@ -83,9 +83,9 @@ export default function TransactionFormModal({
   const resetForm = () => {
     setFormData({
       productId: '',
-      quantityIn: '',
-      quantityOut: '',
-      date: new Date().toISOString().split('T')[0],
+      type: 'sale',
+      quantity: '',
+      unitPrice: '',
       notes: '',
     });
     setSelectedProduct(null);
@@ -103,16 +103,15 @@ export default function TransactionFormModal({
   const validateForm = (): string | null => {
     if (!formData.productId) return 'Please select a product';
     
-    const quantityIn = parseFloat(formData.quantityIn) || 0;
-    const quantityOut = parseFloat(formData.quantityOut) || 0;
+    const quantity = parseFloat(formData.quantity) || 0;
+    const unitPrice = parseFloat(formData.unitPrice) || 0;
     
-    if (quantityIn < 0 || quantityOut < 0) return 'Quantities cannot be negative';
-    if (quantityIn === 0 && quantityOut === 0) return 'Please enter at least one quantity (in or out)';
-    if (!formData.date) return 'Please select a date';
+    if (quantity <= 0) return 'Please enter a valid quantity';
+    if (unitPrice <= 0) return 'Please enter a valid unit price';
     
     // Check transaction limits for free tier
     if (subscriptionTier === 'free' && !transaction) {
-      const currentTransactions = getTransactions();
+      const currentTransactions = transactions;
       if (currentTransactions.length >= 100) {
         return 'Free tier is limited to 100 transactions. Upgrade to Premium for unlimited transactions.';
       }
@@ -131,14 +130,15 @@ export default function TransactionFormModal({
     setIsLoading(true);
     
     try {
-      const quantityIn = parseFloat(formData.quantityIn) || 0;
-      const quantityOut = parseFloat(formData.quantityOut) || 0;
-
+      const quantity = parseFloat(formData.quantity) || 0;
+      const unitPrice = parseFloat(formData.unitPrice) || 0;
+      
       const transactionData = {
-        productId: parseInt(formData.productId),
-        quantityIn,
-        quantityOut,
-        date: formData.date,
+        productId: formData.productId,
+        type: formData.type,
+        quantity,
+        unitPrice,
+        totalAmount: quantity * unitPrice,
         notes: formData.notes.trim() || undefined,
       };
 
@@ -205,49 +205,58 @@ export default function TransactionFormModal({
             </TouchableOpacity>
           </View>
 
-          {/* Quantity In */}
+          {/* Transaction Type */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quantity In</Text>
+            <Text style={styles.sectionTitle}>Transaction Type *</Text>
+            <View style={styles.typeContainer}>
+              {(['purchase', 'sale', 'adjustment'] as const).map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeButton,
+                    formData.type === type && styles.typeButtonActive
+                  ]}
+                  onPress={() => setFormData(prev => ({ ...prev, type }))}
+                >
+                  <Text style={[
+                    styles.typeButtonText,
+                    formData.type === type && styles.typeButtonTextActive
+                  ]}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Quantity */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quantity *</Text>
             <View style={styles.inputContainer}>
               <Hash size={20} color={colors.textSecondary} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter quantity received"
+                placeholder="Enter quantity"
                 placeholderTextColor={colors.textSecondary}
-                value={formData.quantityIn.toString()}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, quantityIn: parseFloat(text) || 0 }))}
+                value={formData.quantity}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, quantity: text }))}
                 keyboardType="numeric"
               />
             </View>
           </View>
 
-          {/* Quantity Out */}
+          {/* Unit Price */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quantity Out</Text>
+            <Text style={styles.sectionTitle}>Unit Price *</Text>
             <View style={styles.inputContainer}>
               <Hash size={20} color={colors.textSecondary} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter quantity sold/used"
+                placeholder="Enter unit price"
                 placeholderTextColor={colors.textSecondary}
-                value={formData.quantityOut.toString()}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, quantityOut: parseFloat(text) || 0 }))}
+                value={formData.unitPrice}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, unitPrice: text }))}
                 keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          {/* Date */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Date *</Text>
-            <View style={styles.inputContainer}>
-              <Calendar size={20} color={colors.textSecondary} />
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.textSecondary}
-                value={formData.date}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, date: text }))}
               />
             </View>
           </View>
@@ -309,7 +318,7 @@ export default function TransactionFormModal({
                 >
                   <Text style={styles.pickerItemText}>{product.name}</Text>
                   <Text style={styles.pickerItemSubtext}>
-                    Stock: {product.stock || 0}
+                    Stock: {getStock(product.id)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -488,6 +497,32 @@ function createStyles(colors: any) {
     emptyPickerText: {
       fontSize: 16,
       color: colors.textSecondary,
+    },
+    typeContainer: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    typeButton: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+    },
+    typeButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    typeButtonText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    typeButtonTextActive: {
+      color: colors.background,
     },
   });
 }

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Modal,
 } from 'react-native';
 import {
   Search,
@@ -20,7 +19,6 @@ import {
   Trash2,
   Calendar,
   DollarSign,
-  User,
 } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -54,7 +52,8 @@ export default function TransactionManagement({ onAddTransaction, onEditTransact
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { transactions, products, vendors, deleteTransaction } = useBusinessStore();
-  const { isPremium } = useSubscriptionTier();
+  const tier = useSubscriptionTier();
+  const isPremium = tier === 'premium';
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -76,8 +75,8 @@ export default function TransactionManagement({ onAddTransaction, onEditTransact
         transaction.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.id.toLowerCase().includes(searchQuery.toLowerCase());
       
-      // Category filter
-      const matchesCategory = selectedCategory === 'all' || transaction.category === selectedCategory;
+      // Category filter (transactions don't have categories, so always match)
+      const matchesCategory = true;
       
       // Type/Date filter
       let matchesFilter = true;

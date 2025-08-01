@@ -68,8 +68,9 @@ interface Recommendation {
 export default function BusinessInsights() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { products, vendors, transactions } = useBusinessStore();
-  const { isPremium } = useSubscriptionTier();
+  const { products, vendors, transactions, getStock } = useBusinessStore();
+  const tier = useSubscriptionTier();
+  const isPremium = tier === 'premium';
   
   const [selectedCategory, setSelectedCategory] = useState<InsightCategory>('overview');
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>('30d');
@@ -125,7 +126,7 @@ export default function BusinessInsights() {
       return change > 0 ? 'up' : 'down';
     };
     
-    const lowStockProducts = products.filter(p => p.stock <= p.minStock);
+    const lowStockProducts = products.filter(p => getStock(p.id) <= 10); // Using threshold of 10
     const activeVendors = vendors.filter(v => 
       currentTransactions.some(t => {
         const product = products.find(p => p.id === t.productId);
@@ -198,7 +199,7 @@ export default function BusinessInsights() {
     const insights: Insight[] = [];
     
     // Low stock alerts
-    const lowStockProducts = products.filter(p => p.stock <= p.minStock);
+    const lowStockProducts = products.filter(p => getStock(p.id) <= 10); // Using threshold of 10
     if (lowStockProducts.length > 0) {
       insights.push({
         id: 'low-stock',
@@ -308,7 +309,7 @@ export default function BusinessInsights() {
     // Sales recommendations
     const lowPerformingProducts = products.filter(p => {
       const sales = transactions.filter(t => t.productId === p.id && t.type === 'sale');
-      return sales.length === 0 && p.stock > 0;
+      return sales.length === 0 && getStock(p.id) > 0;
     });
     
     if (lowPerformingProducts.length > 0) {

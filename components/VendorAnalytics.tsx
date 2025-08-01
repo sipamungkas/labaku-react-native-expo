@@ -57,7 +57,8 @@ export default function VendorAnalytics() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { vendors, products, transactions } = useBusinessStore();
-  const { isPremium } = useSubscriptionTier();
+  const tier = useSubscriptionTier();
+  const isPremium = tier === 'premium';
   
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>('30d');
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('performance');
@@ -199,9 +200,9 @@ export default function VendorAnalytics() {
   };
 
   const chartConfig = {
-    backgroundColor: colors.surface,
-    backgroundGradientFrom: colors.surface,
-    backgroundGradientTo: colors.surface,
+    backgroundColor: colors.card,
+    backgroundGradientFrom: colors.card,
+    backgroundGradientTo: colors.card,
     decimalPlaces: 0,
     color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
     labelColor: (opacity = 1) => colors.text,
@@ -335,6 +336,8 @@ export default function VendorAnalytics() {
                 }}
                 width={chartWidth}
                 height={220}
+                yAxisLabel=""
+                yAxisSuffix=""
                 chartConfig={chartConfig}
                 style={styles.chart}
                 showValuesOnTopOfBars
@@ -431,7 +434,7 @@ export default function VendorAnalytics() {
                 <View style={styles.vendorHeader}>
                   <View style={styles.vendorInfo}>
                     <Text style={styles.vendorName}>{vendorData.vendor.name}</Text>
-                    <Text style={styles.vendorContact}>{vendorData.vendor.contact}</Text>
+                    <Text style={styles.vendorContact}>{vendorData.vendor.phone || vendorData.vendor.email || 'No contact info'}</Text>
                   </View>
                   
                   <View style={styles.vendorMetrics}>

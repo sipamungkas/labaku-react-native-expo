@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Modal,
 } from 'react-native';
 import {
   Search,
@@ -16,7 +15,6 @@ import {
   Package,
   Edit3,
   Trash2,
-  Eye,
   AlertTriangle,
   CheckCircle,
 } from 'lucide-react-native';
@@ -50,7 +48,8 @@ export default function ProductManagement({ onAddProduct, onEditProduct }: Produ
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { products, getStock, deleteProduct } = useBusinessStore();
-  const { isPremium } = useSubscriptionTier();
+  const tier = useSubscriptionTier();
+  const isPremium = tier === 'premium';
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -60,12 +59,13 @@ export default function ProductManagement({ onAddProduct, onEditProduct }: Produ
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
 
+
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = products.filter(product => {
       // Search filter
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+                           product.barcode?.toLowerCase().includes(searchQuery.toLowerCase());
       
       // Category filter
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
@@ -376,8 +376,8 @@ export default function ProductManagement({ onAddProduct, onEditProduct }: Produ
 
                   <View style={styles.productDetails}>
                     <View style={styles.productMeta}>
-                      {product.sku && (
-                        <Text style={styles.productSku}>SKU: {product.sku}</Text>
+                      {product.barcode && (
+                        <Text style={styles.productSku}>Barcode: {product.barcode}</Text>
                       )}
                       {product.category && (
                         <Text style={styles.productCategory}>{product.category}</Text>

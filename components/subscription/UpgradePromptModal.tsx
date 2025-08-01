@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { X, Crown, Check, Zap } from 'lucide-react-native';
 import { useSubscriptionTier } from '../../lib/revenuecat/client';
-import { subscriptionLimits } from '../../lib/subscription/limits.tsx';
-import type { UpgradePromptData } from '../../lib/subscription/limits.tsx';
+import { subscriptionLimits } from '../../lib/subscription/limits';
+import type { UpgradePromptData } from '../../lib/subscription/limits';
 
 interface UpgradePromptModalProps {
   visible: boolean;
@@ -26,7 +26,8 @@ export default function UpgradePromptModal({
   promptData,
   showFeatureComparison = false,
 }: UpgradePromptModalProps) {
-  const { isPremium, isLoading } = useSubscriptionTier();
+  const tier = useSubscriptionTier();
+  const isPremium = tier === 'premium';
   const [upgrading, setUpgrading] = React.useState(false);
 
   const featureComparison = subscriptionLimits.getFeatureComparison();
@@ -162,7 +163,7 @@ export default function UpgradePromptModal({
           <TouchableOpacity
             style={[styles.upgradeButton, upgrading && styles.upgradeButtonDisabled]}
             onPress={handleUpgrade}
-            disabled={upgrading || isLoading}
+            disabled={upgrading}
           >
             <Crown size={20} color="white" />
             <Text style={styles.upgradeButtonText}>

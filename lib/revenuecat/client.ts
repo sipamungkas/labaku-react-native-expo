@@ -281,5 +281,13 @@ export function useSubscriptionStatus() {
   };
 }
 
+/**
+ * Hook to get current subscription tier
+ */
+export function useSubscriptionTier(): 'free' | 'premium' {
+  const subscriptionTier = useAuthStore((state) => state.subscriptionTier);
+  return subscriptionTier || 'free';
+}
+
 // Export default
 export default Purchases;
