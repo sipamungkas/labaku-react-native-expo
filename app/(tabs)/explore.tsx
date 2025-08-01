@@ -1,16 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, ScrollView, View, TouchableOpacity, Dimensions, Alert, Share } from 'react-native';
 import {
   LineChart,
   PieChart,
   BarChart,
 } from 'react-native-chart-kit';
+import { Download, TrendingUp, Users, Package2, DollarSign } from 'lucide-react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useBusinessStore } from '@/lib/stores/businessStore';
-import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { useSubscriptionTier } from '@/lib/stores/authStore';
+import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval, compareAsc } from 'date-fns';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -21,7 +23,9 @@ type ReportPeriod = '7d' | '30d' | '3m' | '1y';
 export default function TabTwoScreen() {
   const colorScheme = useColorScheme();
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('30d');
-  const { products, transactions, stockSummary, getStock } = useBusinessStore();
+  const [selectedChart, setSelectedChart] = useState<'revenue' | 'profit' | 'vendors'>('revenue');
+  const { products, transactions, vendors, stockSummary, getStock } = useBusinessStore();
+  const { tier, isPremium } = useSubscriptionTier();
 
 
 
@@ -69,6 +73,48 @@ export default function TabTwoScreen() {
     };
   }, [filteredTransactions, selectedPeriod]);
 
+  const profitData = useMemo(() => {
+    const { start, end } = getDateRange(selectedPeriod);
+    const days = eachDayOfInterval({ start, end });
+    
+    const dailyProfit = days.map(day => {
+      const dayTransactions = filteredTransactions.filter(t => 
+        format(new Date(t.createdAt), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+      );
+      const revenue = dayTransactions.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.totalAmount, 0);
+      const expenses = dayTransactions.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.totalAmount, 0);
+      return revenue - expenses;
+    });
+
+    return {
+      labels: days.map(day => format(day, selectedPeriod === '7d' ? 'EEE' : 'dd')),
+      datasets: [{
+        data: dailyProfit.length > 0 ? dailyProfit : [0],
+      }],
+    };
+  }, [filteredTransactions, selectedPeriod]);
+
+  const vendorPerformanceData = useMemo(() => {
+    const vendorTotals = filteredTransactions
+      .filter(t => t.type === 'purchase')
+      .reduce((acc, t) => {
+        const product = products.find(p => p.id === t.productId);
+        const vendor = vendors.find(v => v.id === product?.vendorId);
+        const vendorName = vendor?.name || 'Unknown';
+        acc[vendorName] = (acc[vendorName] || 0) + t.totalAmount;
+        return acc;
+      }, {} as Record<string, number>);
+
+    return Object.entries(vendorTotals)
+      .map(([name, amount], index) => ({
+        name: name.length > 10 ? name.substring(0, 10) + '...' : name,
+        amount,
+        color: COLORS[index % COLORS.length],
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+  }, [filteredTransactions, products, vendors]);
+
   const categoryData = useMemo(() => {
     const categoryTotals = filteredTransactions
       .filter(t => t.type === 'purchase')
@@ -106,11 +152,87 @@ export default function TabTwoScreen() {
     { key: '1y', label: '1 Year' },
   ];
 
+  const chartTypes = [
+    { key: 'revenue' as const, label: 'Revenue', icon: DollarSign },
+    { key: 'profit' as const, label: 'Profit', icon: TrendingUp },
+    { key: 'vendors' as const, label: 'Vendors', icon: Users },
+  ];
+
+  const exportData = async () => {
+    if (!isPremium) {
+      Alert.alert(
+        'Premium Feature',
+        'Data export is available for Premium users only. Upgrade to access this feature.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    const reportData = {
+      period: selectedPeriod,
+      totalRevenue,
+      totalExpenses,
+      profit,
+      profitMargin: profitMargin.toFixed(1) + '%',
+      generatedAt: new Date().toISOString(),
+    };
+
+    const csvContent = `Period,Total Revenue,Total Expenses,Net Profit,Profit Margin,Generated At\n${selectedPeriod},${totalRevenue},${totalExpenses},${profit},${profitMargin.toFixed(1)}%,${new Date().toLocaleDateString()}`;
+
+    try {
+      await Share.share({
+        message: `Labaku Business Report\n\nPeriod: ${selectedPeriod}\nTotal Revenue: $${totalRevenue.toLocaleString()}\nTotal Expenses: $${totalExpenses.toLocaleString()}\nNet Profit: $${profit.toLocaleString()}\nProfit Margin: ${profitMargin.toFixed(1)}%\n\nGenerated on ${new Date().toLocaleDateString()}`,
+        title: 'Business Report Export',
+      });
+    } catch (error) {
+      Alert.alert('Export Error', 'Failed to export data. Please try again.');
+    }
+  };
+
+  const getCurrentChartData = () => {
+    switch (selectedChart) {
+      case 'revenue':
+        return revenueData;
+      case 'profit':
+        return profitData;
+      case 'vendors':
+        return vendorPerformanceData;
+      default:
+        return revenueData;
+    }
+  };
+
+  const getChartTitle = () => {
+    switch (selectedChart) {
+      case 'revenue':
+        return 'Revenue Trend';
+      case 'profit':
+        return 'Profit Trend';
+      case 'vendors':
+        return 'Top Vendors by Purchase Volume';
+      default:
+        return 'Revenue Trend';
+    }
+  };
+
   return (
     <ScrollView style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
       <ThemedView style={styles.header}>
-        <ThemedText type="title">Reports & Analytics</ThemedText>
-        <ThemedText style={styles.subtitle}>Business performance insights</ThemedText>
+        <View style={styles.headerTop}>
+          <View>
+            <ThemedText type="title">Reports & Analytics</ThemedText>
+            <ThemedText style={styles.subtitle}>Business performance insights</ThemedText>
+          </View>
+          <TouchableOpacity
+            style={[styles.exportButton, { backgroundColor: isPremium ? Colors[colorScheme ?? 'light'].primary : Colors[colorScheme ?? 'light'].border }]}
+            onPress={exportData}
+          >
+            <Download size={16} color={isPremium ? '#FFFFFF' : Colors[colorScheme ?? 'light'].textSecondary} />
+            <ThemedText style={[styles.exportButtonText, { color: isPremium ? '#FFFFFF' : Colors[colorScheme ?? 'light'].textSecondary }]}>
+              Export
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       </ThemedView>
 
       {/* Period Selector */}
@@ -144,6 +266,50 @@ export default function TabTwoScreen() {
         ))}
       </ThemedView>
 
+      {/* Chart Type Selector */}
+      <ThemedView style={styles.chartTypeSelector}>
+        {chartTypes.map((chart) => {
+          const IconComponent = chart.icon;
+          return (
+            <TouchableOpacity
+              key={chart.key}
+              style={[
+                styles.chartTypeButton,
+                {
+                  backgroundColor: selectedChart === chart.key 
+                    ? Colors[colorScheme ?? 'light'].primary + '20' 
+                    : Colors[colorScheme ?? 'light'].card,
+                  borderColor: selectedChart === chart.key 
+                    ? Colors[colorScheme ?? 'light'].primary 
+                    : Colors[colorScheme ?? 'light'].border,
+                },
+              ]}
+              onPress={() => setSelectedChart(chart.key)}
+            >
+              <IconComponent 
+                size={16} 
+                color={selectedChart === chart.key 
+                  ? Colors[colorScheme ?? 'light'].primary 
+                  : Colors[colorScheme ?? 'light'].textSecondary
+                } 
+              />
+              <ThemedText
+                style={[
+                  styles.chartTypeButtonText,
+                  {
+                    color: selectedChart === chart.key 
+                      ? Colors[colorScheme ?? 'light'].primary 
+                      : Colors[colorScheme ?? 'light'].text,
+                  },
+                ]}
+              >
+                {chart.label}
+              </ThemedText>
+            </TouchableOpacity>
+          );
+        })}
+      </ThemedView>
+
       {/* Key Metrics */}
       <ThemedView style={styles.metricsContainer}>
         <View style={[styles.metricCard, { backgroundColor: Colors[colorScheme ?? 'light'].card }]}>
@@ -172,40 +338,67 @@ export default function TabTwoScreen() {
         </View>
       </ThemedView>
 
-      {/* Revenue Chart */}
+      {/* Dynamic Chart */}
       <ThemedView style={styles.chartContainer}>
-        <ThemedText style={styles.chartTitle}>Revenue Trend</ThemedText>
-        {revenueData.datasets[0].data.some(val => val > 0) ? (
-          <LineChart
-            data={revenueData}
-            width={screenWidth - 40}
-            height={220}
-            chartConfig={{
-              backgroundColor: Colors[colorScheme ?? 'light'].card,
-              backgroundGradientFrom: Colors[colorScheme ?? 'light'].card,
-              backgroundGradientTo: Colors[colorScheme ?? 'light'].card,
-              decimalPlaces: 0,
-              color: (opacity = 1) => Colors[colorScheme ?? 'light'].primary,
-              labelColor: (opacity = 1) => Colors[colorScheme ?? 'light'].text,
-              style: {
-                borderRadius: 16
-              },
-              propsForDots: {
-                r: "6",
-                strokeWidth: "2",
-                stroke: Colors[colorScheme ?? 'light'].primary
-              }
-            }}
-            bezier
-            style={{
-              marginVertical: 8,
-              borderRadius: 16
-            }}
-          />
+        <ThemedText style={styles.chartTitle}>{getChartTitle()}</ThemedText>
+        {selectedChart === 'vendors' ? (
+          vendorPerformanceData.length > 0 ? (
+            <PieChart
+              data={vendorPerformanceData}
+              width={screenWidth - 40}
+              height={220}
+              chartConfig={{
+                color: (opacity = 1) => Colors[colorScheme ?? 'light'].primary,
+                labelColor: (opacity = 1) => Colors[colorScheme ?? 'light'].text,
+              }}
+              accessor="amount"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              center={[10, 50]}
+              absolute
+            />
+          ) : (
+            <View style={styles.noDataContainer}>
+              <ThemedText style={styles.noDataText}>No vendor data for this period</ThemedText>
+            </View>
+          )
         ) : (
-          <View style={styles.noDataContainer}>
-            <ThemedText style={styles.noDataText}>No revenue data for this period</ThemedText>
-          </View>
+          getCurrentChartData().datasets[0].data.some(val => val > 0) ? (
+            <LineChart
+              data={getCurrentChartData()}
+              width={screenWidth - 40}
+              height={220}
+              chartConfig={{
+                backgroundColor: Colors[colorScheme ?? 'light'].card,
+                backgroundGradientFrom: Colors[colorScheme ?? 'light'].card,
+                backgroundGradientTo: Colors[colorScheme ?? 'light'].card,
+                decimalPlaces: 0,
+                color: (opacity = 1) => selectedChart === 'profit' 
+                  ? (getCurrentChartData().datasets[0].data.some(val => val < 0) ? '#FF6B6B' : Colors[colorScheme ?? 'light'].primary)
+                  : Colors[colorScheme ?? 'light'].primary,
+                labelColor: (opacity = 1) => Colors[colorScheme ?? 'light'].text,
+                style: {
+                  borderRadius: 16
+                },
+                propsForDots: {
+                  r: "6",
+                  strokeWidth: "2",
+                  stroke: selectedChart === 'profit' 
+                    ? (getCurrentChartData().datasets[0].data.some(val => val < 0) ? '#FF6B6B' : Colors[colorScheme ?? 'light'].primary)
+                    : Colors[colorScheme ?? 'light'].primary
+                }
+              }}
+              bezier
+              style={{
+                marginVertical: 8,
+                borderRadius: 16
+              }}
+            />
+          ) : (
+            <View style={styles.noDataContainer}>
+              <ThemedText style={styles.noDataText}>No {selectedChart} data for this period</ThemedText>
+            </View>
+          )
         )}
       </ThemedView>
 
@@ -266,6 +459,23 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  exportButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
   subtitle: {
     opacity: 0.7,
     marginTop: 4,
@@ -285,6 +495,27 @@ const styles = StyleSheet.create({
   },
   periodButtonText: {
     fontSize: 14,
+    fontWeight: '500',
+  },
+  chartTypeSelector: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    gap: 8,
+  },
+  chartTypeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+  },
+  chartTypeButtonText: {
+    fontSize: 12,
     fontWeight: '500',
   },
   metricsContainer: {

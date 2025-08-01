@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { deepLinkHandler } from '@/lib/utils/deepLinkHandler';
 import { ExternalLink, Copy, TestTube, Zap } from 'lucide-react-native';
 

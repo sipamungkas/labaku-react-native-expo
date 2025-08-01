@@ -16,10 +16,10 @@ config.resolver.blockList = [
   /\.wasm$/,
 ];
 
-// Exclude web platform completely
+// Enable require.context for Metro
 config.transformer = {
   ...config.transformer,
-  unstable_allowRequireContext: false,
+  unstable_allowRequireContext: true,
 };
 
 module.exports = config;

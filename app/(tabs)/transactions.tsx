@@ -8,11 +8,12 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Receipt, TrendingUp, TrendingDown, RotateCcw, Filter } from 'lucide-react-native';
+import { Plus, Receipt, TrendingUp, TrendingDown, RotateCcw, Filter, Edit3, Trash2 } from 'lucide-react-native';
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTransactions, useBusinessStore, Transaction } from '@/lib/stores/businessStore';
+import TransactionFormModal from '@/components/forms/TransactionFormModal';
 
 /**
  * Transactions Screen
@@ -40,20 +41,39 @@ export default function TransactionsScreen() {
     .filter(t => t.type === 'sale')
     .reduce((sum, t) => sum + t.totalAmount, 0);
   
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  
   const handleAddTransaction = () => {
-    // For demo purposes, add a sample transaction
-    const transactionTypes: Transaction['type'][] = ['purchase', 'sale', 'adjustment'];
-    const randomType = transactionTypes[Math.floor(Math.random() * transactionTypes.length)];
-    
-    addTransaction({
-      type: randomType,
-      productId: 'sample-product',
-      vendorId: randomType === 'purchase' ? 'sample-vendor' : undefined,
-      quantity: Math.floor(Math.random() * 10) + 1,
-      unitPrice: Math.floor(Math.random() * 50000) + 10000,
-      totalAmount: 0, // Will be calculated
-      notes: `Sample ${randomType} transaction`,
-    });
+    setIsAddModalVisible(true);
+  };
+  
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsAddModalVisible(true);
+  };
+  
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    Alert.alert(
+      'Delete Transaction',
+      'Are you sure you want to delete this transaction? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            const { deleteTransaction } = useBusinessStore.getState();
+            deleteTransaction(transaction.id);
+          },
+        },
+      ]
+    );
+  };
+  
+  const handleCloseModal = () => {
+    setIsAddModalVisible(false);
+    setEditingTransaction(null);
   };
   
   const getTransactionIcon = (type: Transaction['type']) => {
@@ -198,6 +218,24 @@ export default function TransactionsScreen() {
                   </View>
                 </View>
                 
+                {/* Transaction Actions */}
+                <View style={styles.transactionActions}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleEditTransaction(transaction)}
+                  >
+                    <Edit3 size={16} color={colors.primary} />
+                    <Text style={styles.actionButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleDeleteTransaction(transaction)}
+                  >
+                    <Trash2 size={16} color={colors.error} />
+                    <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+                
                 <View style={styles.transactionDetails}>
                   <View style={styles.transactionDetailRow}>
                     <Text style={styles.transactionDetailLabel}>Quantity:</Text>
@@ -226,6 +264,13 @@ export default function TransactionsScreen() {
       <TouchableOpacity style={styles.fab} onPress={handleAddTransaction}>
         <Plus size={24} color={colors.background} />
       </TouchableOpacity>
+      
+      {/* Transaction Form Modal */}
+      <TransactionFormModal
+        visible={isAddModalVisible}
+        onClose={handleCloseModal}
+        transaction={editingTransaction}
+      />
     </SafeAreaView>
   );
 }
@@ -411,6 +456,26 @@ function createStyles(colors: any) {
     transactionDetailValue: {
       fontSize: 14,
       color: colors.text,
+      fontWeight: '500',
+    },
+    transactionActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginBottom: 8,
+      gap: 12,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: colors.background,
+    },
+    actionButtonText: {
+      fontSize: 12,
+      color: colors.primary,
+      marginLeft: 4,
       fontWeight: '500',
     },
     fab: {
